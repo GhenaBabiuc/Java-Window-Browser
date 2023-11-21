@@ -32,6 +32,10 @@ public class SimpleSwingBrowser extends JFrame {
     private final JButton btnHistory = new JButton("History");
     private final JList<String> historyList = new JList<>();
     private final DefaultListModel<String> historyListModel = new DefaultListModel<>();
+    private final JButton btnAddBookmark = new JButton("Add Bookmark");
+    private final JButton btnManageBookmarks = new JButton("Manage Bookmarks");
+    private final DefaultListModel<String> bookmarksListModel = new DefaultListModel<>();
+    private final JList<String> bookmarksList = new JList<>(bookmarksListModel);
 
     public SimpleSwingBrowser() {
         super();
@@ -46,6 +50,8 @@ public class SimpleSwingBrowser extends JFrame {
         btnGo.addActionListener(al);
         txtURL.addActionListener(al);
         btnHistory.addActionListener(e -> showHistoryDialog());
+        btnAddBookmark.addActionListener(e -> addBookmark());
+        btnManageBookmarks.addActionListener(e -> showBookmarksDialog());
 
         btnRefresh.addActionListener(e -> Platform.runLater(() -> engine.reload()));
         btnBack.addActionListener(e -> Platform.runLater(() -> {
@@ -77,6 +83,8 @@ public class SimpleSwingBrowser extends JFrame {
         JPanel historyPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         historyPanel.setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
         historyPanel.add(btnHistory, BorderLayout.WEST);
+        historyPanel.add(btnAddBookmark, BorderLayout.WEST);
+        historyPanel.add(btnManageBookmarks, BorderLayout.WEST);
 
         JPanel topBar = new JPanel();
         topBar.setLayout(new BoxLayout(topBar, BoxLayout.Y_AXIS));
@@ -99,6 +107,55 @@ public class SimpleSwingBrowser extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         pack();
     }
+
+    private void addBookmark() {
+        String currentUrl = txtURL.getText();
+        if (!bookmarksListModel.contains(currentUrl)) {
+            bookmarksListModel.addElement(currentUrl);
+            JOptionPane.showMessageDialog(panel, "Bookmark added successfully!");
+        } else {
+            JOptionPane.showMessageDialog(panel, "Bookmark already exists!");
+        }
+    }
+
+    private void showBookmarksDialog() {
+        JDialog bookmarksDialog = new JDialog(this, "Bookmarks", true);
+        bookmarksDialog.setLayout(new BorderLayout());
+
+        JScrollPane bookmarksScrollPane = new JScrollPane(bookmarksList);
+        bookmarksDialog.add(bookmarksScrollPane, BorderLayout.CENTER);
+
+        bookmarksList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    openSelectedBookmark();
+                }
+            }
+        });
+
+        bookmarksList.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyCode.ENTER.getCode()) {
+                    openSelectedPageFromHistory();
+                }
+            }
+        });
+
+        bookmarksDialog.setSize(400, 300);
+        bookmarksDialog.setLocationRelativeTo(this);
+        bookmarksDialog.setVisible(true);
+    }
+
+    private void openSelectedBookmark() {
+        int selectedIndex = bookmarksList.getSelectedIndex();
+        if (selectedIndex >= 0 && selectedIndex < bookmarksListModel.getSize()) {
+            String selectedUrl = bookmarksListModel.getElementAt(selectedIndex);
+            loadURL(selectedUrl);
+        }
+    }
+
 
     private void showHistoryDialog() {
         List<WebHistory.Entry> entries = engine.getHistory().getEntries();
