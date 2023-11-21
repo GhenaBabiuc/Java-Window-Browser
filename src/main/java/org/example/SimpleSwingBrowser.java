@@ -3,14 +3,17 @@ package org.example;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
 import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebHistory;
 import javafx.scene.web.WebView;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionListener;
+import java.awt.event.*;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.List;
 
 import static javafx.concurrent.Worker.State.FAILED;
 
@@ -26,6 +29,9 @@ public class SimpleSwingBrowser extends JFrame {
     private final JButton btnRefresh = new JButton("Refresh");
     private final JButton btnBack = new JButton("<-");
     private final JButton btnForward = new JButton("->");
+    private final JButton btnHistory = new JButton("History");
+    private final JList<String> historyList = new JList<>();
+    private final DefaultListModel<String> historyListModel = new DefaultListModel<>();
 
     public SimpleSwingBrowser() {
         super();
@@ -39,6 +45,7 @@ public class SimpleSwingBrowser extends JFrame {
 
         btnGo.addActionListener(al);
         txtURL.addActionListener(al);
+        btnHistory.addActionListener(e -> showHistoryDialog());
 
         btnRefresh.addActionListener(e -> Platform.runLater(() -> engine.reload()));
         btnBack.addActionListener(e -> Platform.runLater(() -> {
@@ -55,17 +62,26 @@ public class SimpleSwingBrowser extends JFrame {
         progressBar.setPreferredSize(new Dimension(150, 18));
         progressBar.setStringPainted(true);
 
-        JPanel topBar = new JPanel(new BorderLayout());
-        topBar.setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
+        JPanel addressBar = new JPanel(new BorderLayout());
+        addressBar.setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         buttonPanel.add(btnRefresh);
         buttonPanel.add(btnBack);
         buttonPanel.add(btnForward);
 
-        topBar.add(buttonPanel, BorderLayout.WEST);
-        topBar.add(txtURL, BorderLayout.CENTER);
-        topBar.add(btnGo, BorderLayout.EAST);
+        addressBar.add(buttonPanel, BorderLayout.WEST);
+        addressBar.add(txtURL, BorderLayout.CENTER);
+        addressBar.add(btnGo, BorderLayout.EAST);
+
+        JPanel historyPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        historyPanel.setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
+        historyPanel.add(btnHistory, BorderLayout.WEST);
+
+        JPanel topBar = new JPanel();
+        topBar.setLayout(new BoxLayout(topBar, BoxLayout.Y_AXIS));
+        topBar.add(addressBar);
+        topBar.add(historyPanel);
 
         JPanel statusBar = new JPanel(new BorderLayout(5, 0));
         statusBar.setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
@@ -82,6 +98,53 @@ public class SimpleSwingBrowser extends JFrame {
         setPreferredSize(new Dimension(1024, 600));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         pack();
+    }
+
+    private void showHistoryDialog() {
+        List<WebHistory.Entry> entries = engine.getHistory().getEntries();
+        historyListModel.clear();
+
+        for (WebHistory.Entry entry : entries) {
+            historyListModel.addElement(entry.getUrl());
+        }
+
+        historyList.setModel(historyListModel);
+
+        JDialog historyDialog = new JDialog(this, "History", true);
+        historyDialog.setLayout(new BorderLayout());
+
+        JScrollPane historyScrollPane = new JScrollPane(historyList);
+        historyDialog.add(historyScrollPane, BorderLayout.CENTER);
+
+        historyList.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyCode.ENTER.getCode()) {
+                    openSelectedPageFromHistory();
+                }
+            }
+        });
+
+        historyList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    openSelectedPageFromHistory();
+                }
+            }
+        });
+
+        historyDialog.setSize(400, 300);
+        historyDialog.setLocationRelativeTo(this);
+        historyDialog.setVisible(true);
+    }
+
+    private void openSelectedPageFromHistory() {
+        int selectedIndex = historyList.getSelectedIndex();
+        if (selectedIndex >= 0 && selectedIndex < historyListModel.getSize()) {
+            String selectedUrl = historyListModel.getElementAt(selectedIndex);
+            loadURL(selectedUrl);
+        }
     }
 
     private void createScene() {
