@@ -257,6 +257,10 @@ public class SimpleSwingBrowser extends JFrame {
         }
     }
 
+    public JPanel getPanel() {
+        return panel;
+    }
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             SimpleSwingBrowser browser = new SimpleSwingBrowser();
