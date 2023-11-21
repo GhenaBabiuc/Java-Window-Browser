@@ -18,13 +18,14 @@ public class SimpleSwingBrowser extends JFrame {
 
     private final JFXPanel jfxPanel = new JFXPanel();
     private WebEngine engine;
-
     private final JPanel panel = new JPanel(new BorderLayout());
     private final JLabel lblStatus = new JLabel();
-
     private final JButton btnGo = new JButton("Go");
     private final JTextField txtURL = new JTextField();
     private final JProgressBar progressBar = new JProgressBar();
+    private final JButton btnRefresh = new JButton("Refresh");
+    private final JButton btnBack = new JButton("<-");
+    private final JButton btnForward = new JButton("->");
 
     public SimpleSwingBrowser() {
         super();
@@ -39,11 +40,30 @@ public class SimpleSwingBrowser extends JFrame {
         btnGo.addActionListener(al);
         txtURL.addActionListener(al);
 
+        btnRefresh.addActionListener(e -> Platform.runLater(() -> engine.reload()));
+        btnBack.addActionListener(e -> Platform.runLater(() -> {
+            if (engine.getHistory().getCurrentIndex() > 0) {
+                engine.getHistory().go(-1);
+            }
+        }));
+        btnForward.addActionListener(e -> Platform.runLater(() -> {
+            if (engine.getHistory().getCurrentIndex() + 1 < engine.getHistory().getEntries().size()) {
+                engine.getHistory().go(1);
+            }
+        }));
+
         progressBar.setPreferredSize(new Dimension(150, 18));
         progressBar.setStringPainted(true);
 
-        JPanel topBar = new JPanel(new BorderLayout(5, 0));
+        JPanel topBar = new JPanel(new BorderLayout());
         topBar.setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        buttonPanel.add(btnRefresh);
+        buttonPanel.add(btnBack);
+        buttonPanel.add(btnForward);
+
+        topBar.add(buttonPanel, BorderLayout.WEST);
         topBar.add(txtURL, BorderLayout.CENTER);
         topBar.add(btnGo, BorderLayout.EAST);
 
@@ -58,6 +78,7 @@ public class SimpleSwingBrowser extends JFrame {
 
         getContentPane().add(panel);
 
+        setLocationRelativeTo(null);
         setPreferredSize(new Dimension(1024, 600));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         pack();
@@ -72,19 +93,9 @@ public class SimpleSwingBrowser extends JFrame {
 
             engine.titleProperty().addListener((observable, oldValue, newValue) -> SwingUtilities.invokeLater(() -> SimpleSwingBrowser.this.setTitle(newValue)));
 
-            engine.setOnStatusChanged(event -> SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    lblStatus.setText(event.getData());
-                }
-            }));
+            engine.setOnStatusChanged(event -> SwingUtilities.invokeLater(() -> lblStatus.setText(event.getData())));
 
-            engine.locationProperty().addListener((ov, oldValue, newValue) -> SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    txtURL.setText(newValue);
-                }
-            }));
+            engine.locationProperty().addListener((ov, oldValue, newValue) -> SwingUtilities.invokeLater(() -> txtURL.setText(newValue)));
 
             engine.getLoadWorker().workDoneProperty().addListener((observableValue, oldValue, newValue) -> SwingUtilities.invokeLater(() -> progressBar.setValue(newValue.intValue())));
 
@@ -129,6 +140,7 @@ public class SimpleSwingBrowser extends JFrame {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             SimpleSwingBrowser browser = new SimpleSwingBrowser();
+            browser.setExtendedState(JFrame.MAXIMIZED_BOTH);
             browser.setVisible(true);
             browser.loadURL("https://google.com");
         });
